@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>PhotoCraft — opacite</title>
+<link rel="stylesheet" href="commun.css">
+</head>
+<body>
+
+<div class="champ">
+  <label for="mode">Mode</label>
+  <select id="mode">
+    <option value="relatif">Par pas</option>
+    <option value="absolu">Valeur fixe</option>
+  </select>
+</div>
+
+<div class="champ" id="bloc-pas">
+  <label for="pas">Pas (%)</label>
+  <input id="pas" type="number" min="-100" max="100" step="5" value="10">
+  <span class="aide">
+    Negatif pour baisser. Le pas s'applique a l'opacite REELLE lue dans PhotoCraft,
+    pas a un compteur garde par la touche : bouger le curseur dans l'application ne desynchronise rien.
+  </span>
+</div>
+
+<div class="champ" id="bloc-valeur" style="display:none">
+  <label for="valeur">Opacite (%)</label>
+  <input id="valeur" type="number" min="0" max="100" step="5" value="100">
+</div>
+
+<div id="connexion"></div>
+
+<script type="module">
+import { demarrer, enregistrer, monterBlocConnexion } from './commun.js';
+
+const elMode = document.getElementById('mode');
+const elPas = document.getElementById('pas');
+const elValeur = document.getElementById('valeur');
+const blocPas = document.getElementById('bloc-pas');
+const blocValeur = document.getElementById('bloc-valeur');
+
+function rendre() {
+  const absolu = elMode.value === 'absolu';
+  blocPas.style.display = absolu ? 'none' : 'flex';
+  blocValeur.style.display = absolu ? 'flex' : 'none';
+}
+
+elMode.onchange = () => { enregistrer({ mode: elMode.value }); rendre(); };
+elPas.oninput = () => enregistrer({ pas: Number(elPas.value) });
+elValeur.oninput = () => enregistrer({ valeur: Number(elValeur.value) });
+
+const appliquerConnexion = monterBlocConnexion(document.getElementById('connexion'));
+
+demarrer({
+  surReglages: (r) => {
+    elMode.value = r.mode ?? 'relatif';
+    elPas.value = r.pas ?? 10;
+    elValeur.value = r.valeur ?? 100;
+    rendre();
+  },
+  surGlobaux: appliquerConnexion,
+});
+</script>
+</body>
+</html>

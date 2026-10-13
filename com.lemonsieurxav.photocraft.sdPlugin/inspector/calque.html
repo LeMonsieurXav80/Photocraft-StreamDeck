@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>PhotoCraft — calque</title>
+<link rel="stylesheet" href="commun.css">
+</head>
+<body>
+
+<div class="champ">
+  <label for="operation">Operation</label>
+  <select id="operation">
+    <option value="dessus">Calque au-dessus</option>
+    <option value="dessous">Calque en-dessous</option>
+    <option value="masquer">Masquer / afficher</option>
+    <option value="seul">Afficher celui-ci seul</option>
+    <option value="dupliquer">Dupliquer</option>
+    <option value="fusionner">Fusionner vers le bas</option>
+    <option value="tampon">Tampon visible</option>
+    <option value="aplatir">Aplatir l'image</option>
+  </select>
+  <span class="aide" id="aide">—</span>
+</div>
+
+<div id="connexion"></div>
+
+<script type="module">
+import { demarrer, enregistrer, monterBlocConnexion } from './commun.js';
+
+const AIDES = {
+  dessus: 'Remonte d’un rang dans la pile. La touche affiche le nom du calque actif.',
+  dessous: 'Descend d’un rang. La touche affiche le nom du calque actif.',
+  masquer: 'Bascule la visibilite. La touche montre l’etat reel : ● visible, ○ masque.',
+  seul: 'N’affiche que le calque actif ; un second appui restaure les autres.',
+  dupliquer: 'Duplique le calque actif.',
+  fusionner: 'Fusionne le calque actif dans celui du dessous.',
+  tampon: 'Fusionne tous les calques visibles dans un nouveau calque, sans detruire les originaux.',
+  aplatir: 'Aplatit tout le document. Destructif.',
+};
+
+const elOperation = document.getElementById('operation');
+const elAide = document.getElementById('aide');
+
+function rendre() { elAide.textContent = AIDES[elOperation.value] ?? ''; }
+
+elOperation.onchange = () => { enregistrer({ operation: elOperation.value }); rendre(); };
+
+const appliquerConnexion = monterBlocConnexion(document.getElementById('connexion'));
+
+demarrer({
+  surReglages: (r) => { elOperation.value = r.operation ?? 'dessus'; rendre(); },
+  surGlobaux: appliquerConnexion,
+});
+</script>
+</body>
+</html>

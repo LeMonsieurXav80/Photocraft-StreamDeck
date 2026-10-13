@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>PhotoCraft — commande</title>
+<link rel="stylesheet" href="commun.css">
+</head>
+<body>
+
+<div class="champ">
+  <label for="filtre">Filtrer</label>
+  <input id="filtre" type="text" placeholder="calque, fusion, contenu…" autocomplete="off">
+  <span class="aide">Cherche dans l'identifiant, le libelle et le chemin de menu.</span>
+</div>
+
+<div class="champ">
+  <label for="commande">Commande</label>
+  <select id="commande" size="12"><option value="">— en attente de PhotoCraft —</option></select>
+</div>
+
+<div id="detail" class="etat">Choisir une commande.</div>
+
+<div class="champ" style="margin-top:16px">
+  <label for="params">Parametres (JSON)</label>
+  <textarea id="params" placeholder='{"opacity": 0.5}' autocomplete="off" spellcheck="false"></textarea>
+  <span class="aide" id="aide-params">Laisser vide pour les valeurs par defaut.</span>
+</div>
+
+<div class="champ">
+  <label for="libelle">Titre de la touche</label>
+  <input id="libelle" type="text" placeholder="(libelle de la commande)" autocomplete="off">
+</div>
+
+<div id="connexion"></div>
+
+<script type="module">
+import { demarrer, enregistrer, versPlugin, monterBlocConnexion } from './commun.js';
+
+const elFiltre = document.getElementById('filtre');
+const elCommande = document.getElementById('commande');
+const elDetail = document.getElementById('detail');
+const elParams = document.getElementById('params');
+const elAideParams = document.getElementById('aide-params');
+const elLibelle = document.getElementById('libelle');
+
+let commandes = [];
+let choisie = null;
+
+function rendreListe() {
+  const terme = elFiltre.value.trim().toLowerCase();
+  const visibles = commandes.filter((c) =>
+    !terme ||
+    c.id.toLowerCase().includes(terme) ||
+    c.libelle.toLowerCase().includes(terme) ||
+    c.menu.toLowerCase().includes(terme));
+
+  elCommande.innerHTML = '';
+  if (!commandes.length) {
+    elCommande.innerHTML = '<option value="">— en attente de PhotoCraft —</option>';
+    return;
+  }
+  if (!visibles.length) {
+    elCommande.innerHTML = '<option value="">— aucune correspondance —</option>';
+    return;
+  }
+  for (const c of visibles) {
+    const o = document.createElement('option');
+    o.value = c.id;
+    o.textContent = c.menu ? `${c.libelle}  ·  ${c.menu}` : c.libelle;
+    if (c.id === choisie) o.selected = true;
+    elCommande.appendChild(o);
+  }
+}
+
+function rendreDetail() {
+  const c = commandes.find((x) => x.id === choisie);
+  if (!c) { elDetail.textContent = 'Choisir une commande.'; elDetail.className = 'etat'; return; }
+  elDetail.className = 'etat ok';
+  elDetail.innerHTML = `<code>${c.id}</code>${c.raccourci ? ' · ' + c.raccourci : ''}`;
+  // Le schema de parametres vient de PhotoCraft : l'afficher evite d'aller
+  // le chercher dans la doc, et c'est la seule source a jour en alpha.
+  elAideParams.textContent = c.params
+    ? `Attendu : ${c.params}`
+    : 'Cette commande ne prend aucun parametre.';
+}
+
+elFiltre.oninput = rendreListe;
+
+elCommande.onchange = () => {
+  choisie = elCommande.value || null;
+  const c = commandes.find((x) => x.id === choisie);
+  enregistrer({ commande: choisie, libelle: elLibelle.value || c?.libelle || '' });
+  rendreDetail();
+};
+
+elParams.oninput = () => {
+  // Validation immediate : une accolade oubliee se verrait sinon seulement au
+  // moment d'appuyer sur la touche, en plein travail.
+  const texte = elParams.value.trim();
+  if (texte) {
+    try { JSON.parse(texte); elParams.style.borderColor = '#3f9168'; }
+    catch { elParams.style.borderColor = '#c4483f'; }
+  } else {
+    elParams.style.borderColor = '#555';
+  }
+  enregistrer({ params: elParams.value });
+};
+
+elLibelle.oninput = () => enregistrer({ libelle: elLibelle.value });
+
+const appliquerConnexion = monterBlocConnexion(document.getElementById('connexion'));
+
+demarrer({
+  surReglages: (r) => {
+    choisie = r.commande ?? null;
+    elParams.value = r.params ?? '';
+    elLibelle.value = r.libelle ?? '';
+    rendreListe();
+    rendreDetail();
+  },
+  surGlobaux: (g) => {
+    appliquerConnexion(g);
+    versPlugin({ demande: 'commandes' });
+  },
+  surPlugin: (p) => {
+    if (p.reponse !== 'commandes') return;
+    if (p.erreur) {
+      elDetail.className = 'etat ko';
+      elDetail.textContent = `PhotoCraft injoignable : ${p.erreur}`;
+      return;
+    }
+    commandes = p.commandes ?? [];
+    rendreListe();
+    rendreDetail();
+  },
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>PhotoCraft — brosse</title>
+<link rel="stylesheet" href="commun.css">
+</head>
+<body>
+
+<div class="champ">
+  <label for="operation">Reglage</label>
+  <select id="operation">
+    <option value="taille+">Taille +</option>
+    <option value="taille-">Taille −</option>
+    <option value="durete+">Durete +</option>
+    <option value="durete-">Durete −</option>
+  </select>
+  <span class="aide">
+    La touche affiche la valeur courante. Les pas sont ceux de PhotoCraft lui-meme
+    (<code>tools.increaseBrushSize</code> et consorts) : identiques au clavier, et non lineaires.
+  </span>
+</div>
+
+<div class="etat">
+  Un Stream Deck MK.2 n'a pas de molette : ces reglages se posent par paires de touches,
+  une pour monter, une pour descendre.
+</div>
+
+<div class="etat" style="margin-top:10px">
+  Taille et durete sont propres a <strong>chaque outil</strong> : la brosse et la gomme ont
+  chacune la leur. La touche affiche donc la valeur de l'outil actif, et ce nombre change
+  quand on change d'outil sans que rien n'ait ete modifie.
+</div>
+
+<div id="connexion"></div>
+
+<script type="module">
+import { demarrer, enregistrer, monterBlocConnexion } from './commun.js';
+
+const elOperation = document.getElementById('operation');
+elOperation.onchange = () => enregistrer({ operation: elOperation.value });
+
+const appliquerConnexion = monterBlocConnexion(document.getElementById('connexion'));
+
+demarrer({
+  surReglages: (r) => { elOperation.value = r.operation ?? 'taille+'; },
+  surGlobaux: appliquerConnexion,
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+# Dependances
+node_modules/
+
+# Jeton du canal de controle. PhotoCraft le reecrit a chaque lancement, mais il
+# donne un acces complet a l'application : ouvrir des fichiers, en ecrire, et
+# executer n'importe laquelle des 892 commandes. Il n'a rien a faire ici.
+*.token
+control.token
+
+# Logs ecrits par le plugin dans sa propre copie installee
+logs/
+*.log
+
+.DS_Store

@@ -1,0 +1,13 @@
+body { font: 13px -apple-system, system-ui, sans-serif; color: #d8d8d8; background: #2d2d2d; margin: 0; padding: 14px; }
+.champ { display: flex; flex-direction: column; gap: 5px; margin-bottom: 16px; }
+label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #9b9b9b; }
+select, input, textarea { background: #3d3d3d; border: 1px solid #555; color: #eee; border-radius: 4px; padding: 6px 7px; font: inherit; width: 100%; box-sizing: border-box; }
+textarea { font-family: ui-monospace, Menlo, monospace; font-size: 12px; min-height: 54px; resize: vertical; }
+select:focus, input:focus, textarea:focus { outline: 2px solid #4a90d9; outline-offset: -1px; }
+.aide { font-size: 11px; color: #8d8d8d; line-height: 1.45; }
+.etat { padding: 7px 9px; border-radius: 4px; font-size: 11px; border-left: 3px solid #666; background: #363636; line-height: 1.4; }
+.etat.ok { border-left-color: #3f9168; }
+.etat.ko { border-left-color: #c4483f; }
+code { background: #444; padding: 1px 4px; border-radius: 3px; }
+.separateur { border: 0; border-top: 1px solid #454545; margin: 18px 0 16px; }
+.titre-section { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #7d7d7d; margin-bottom: 10px; }

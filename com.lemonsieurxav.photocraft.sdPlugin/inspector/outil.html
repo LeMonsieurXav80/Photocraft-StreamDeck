@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>PhotoCraft — outil</title>
+<link rel="stylesheet" href="commun.css">
+</head>
+<body>
+
+<div class="champ">
+  <label for="outil">Outil</label>
+  <select id="outil"></select>
+  <span class="aide">La touche s'allume et affiche <code>●</code> quand cet outil est l'outil actif dans PhotoCraft.</span>
+</div>
+
+<div class="champ">
+  <label for="libre">Autre nom (optionnel)</label>
+  <input id="libre" type="text" placeholder="nom exact attendu par ui.set" autocomplete="off">
+  <span class="aide">
+    PhotoCraft n'expose pas la liste de ses outils : celle du dessus a ete etablie par essais
+    sur la version 0.8.2. Si une version plus recente en ajoute un, le saisir ici.
+  </span>
+</div>
+
+<div id="connexion"></div>
+
+<script type="module">
+import { demarrer, enregistrer, monterBlocConnexion } from './commun.js';
+
+// Noms valides verifies un par un contre `ui.set` sur PhotoCraft 0.8.2.
+// Ils ne sont PAS devinables depuis le registre de commandes : les commandes
+// `paint.*` executent un trace, elles ne nomment pas l'outil.
+const GROUPES = [
+  ['Deplacement et selection', ['Move', 'RectMarquee', 'EllipseMarquee', 'SingleRow', 'SingleColumn', 'Lasso', 'MagneticLasso', 'QuickSelection', 'MagicWand']],
+  ['Recadrage et mesure', ['Crop', 'PerspectiveCrop', 'Frame', 'Slice', 'Eyedropper', 'Note', 'Count']],
+  ['Retouche', ['SpotHealing', 'Healing', 'Patch', 'ContentAwareMove', 'RedEye', 'Remove']],
+  ['Peinture', ['Brush', 'Pencil', 'ColorReplacement', 'MixerBrush', 'CloneStamp', 'PatternStamp', 'HistoryBrush']],
+  ['Gomme et remplissage', ['Eraser', 'BackgroundEraser', 'MagicEraser', 'Gradient', 'PaintBucket']],
+  ['Retouche locale', ['Blur', 'Sharpen', 'Smudge', 'Dodge', 'Burn', 'Sponge']],
+  ['Vecteur et texte', ['Pen', 'FreeformPen', 'Type', 'VerticalType', 'PathSelection', 'DirectSelection', 'Rectangle', 'Ellipse', 'Polygon', 'Line', 'CustomShape']],
+  ['Navigation', ['Hand', 'RotateView', 'Zoom']],
+];
+
+const elOutil = document.getElementById('outil');
+const elLibre = document.getElementById('libre');
+
+for (const [titre, outils] of GROUPES) {
+  const g = document.createElement('optgroup');
+  g.label = titre;
+  for (const nom of outils) {
+    const o = document.createElement('option');
+    o.value = nom;
+    o.textContent = nom;
+    g.appendChild(o);
+  }
+  elOutil.appendChild(g);
+}
+
+elOutil.onchange = () => { elLibre.value = ''; enregistrer({ outil: elOutil.value }); };
+elLibre.oninput = () => { if (elLibre.value.trim()) enregistrer({ outil: elLibre.value.trim() }); };
+
+const appliquerConnexion = monterBlocConnexion(document.getElementById('connexion'));
+
+demarrer({
+  surReglages: (r) => {
+    const voulu = r.outil ?? 'Brush';
+    const connu = [...elOutil.options].some((o) => o.value === voulu);
+    if (connu) { elOutil.value = voulu; elLibre.value = ''; }
+    else { elLibre.value = voulu; }
+  },
+  surGlobaux: appliquerConnexion,
+});
+</script>
+</body>
+</html>

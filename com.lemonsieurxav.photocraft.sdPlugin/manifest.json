@@ -1,0 +1,111 @@
+{
+  "UUID": "com.lemonsieurxav.photocraft",
+  "Name": "PhotoCraft",
+  "Version": "0.1.0.0",
+  "Author": "Xavier Fonseca",
+  "Description": "Pilote PhotoCraft par son canal de controle local : les 892 commandes du registre, l'outil actif, le calque, la brosse. Non affilie a l'equipe ArtCraft.",
+  "Category": "PhotoCraft",
+  "CategoryIcon": "images/category",
+  "Icon": "images/plugin",
+  "CodePath": "plugin.js",
+  "SDKVersion": 3,
+  "Software": {
+    "MinimumVersion": "7.1"
+  },
+  "OS": [
+    {
+      "Platform": "mac",
+      "MinimumVersion": "10.15"
+    },
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
+    }
+  ],
+  "Nodejs": {
+    "Version": "20",
+    "Debug": "enabled"
+  },
+  "Actions": [
+    {
+      "UUID": "com.lemonsieurxav.photocraft.commande",
+      "Name": "Commande",
+      "Icon": "images/commande",
+      "Tooltip": "Execute n'importe quelle commande du registre PhotoCraft (892 disponibles).",
+      "PropertyInspectorPath": "inspector/commande.html",
+      "States": [
+        {
+          "Image": "images/commande",
+          "TitleAlignment": "middle",
+          "FontSize": 11
+        }
+      ]
+    },
+    {
+      "UUID": "com.lemonsieurxav.photocraft.outil",
+      "Name": "Outil",
+      "Icon": "images/outil",
+      "Tooltip": "Selectionne un outil. La touche marque l'outil actif.",
+      "PropertyInspectorPath": "inspector/outil.html",
+      "States": [
+        {
+          "Image": "images/outil",
+          "TitleAlignment": "middle",
+          "FontSize": 12
+        },
+        {
+          "Image": "images/outil-actif",
+          "TitleAlignment": "middle",
+          "FontSize": 12
+        }
+      ]
+    },
+    {
+      "UUID": "com.lemonsieurxav.photocraft.calque",
+      "Name": "Calque",
+      "Icon": "images/calque",
+      "Tooltip": "Navigue dans la pile, masque, fusionne, tampon visible. Affiche le calque actif.",
+      "PropertyInspectorPath": "inspector/calque.html",
+      "States": [
+        {
+          "Image": "images/calque",
+          "TitleAlignment": "middle",
+          "FontSize": 11
+        },
+        {
+          "Image": "images/calque-masque",
+          "TitleAlignment": "middle",
+          "FontSize": 11
+        }
+      ]
+    },
+    {
+      "UUID": "com.lemonsieurxav.photocraft.opacite",
+      "Name": "Opacite",
+      "Icon": "images/opacite",
+      "Tooltip": "Opacite du calque actif, par pas ou en valeur absolue.",
+      "PropertyInspectorPath": "inspector/opacite.html",
+      "States": [
+        {
+          "Image": "images/opacite",
+          "TitleAlignment": "middle",
+          "FontSize": 11
+        }
+      ]
+    },
+    {
+      "UUID": "com.lemonsieurxav.photocraft.brosse",
+      "Name": "Brosse",
+      "Icon": "images/brosse",
+      "Tooltip": "Taille et durete de la brosse, par pas. Affiche la valeur courante.",
+      "PropertyInspectorPath": "inspector/brosse.html",
+      "States": [
+        {
+          "Image": "images/brosse",
+          "TitleAlignment": "middle",
+          "FontSize": 11
+        }
+      ]
+    }
+  ]
+}
