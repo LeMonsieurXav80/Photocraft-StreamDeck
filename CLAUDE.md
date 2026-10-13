@@ -57,7 +57,7 @@ actions. Un seul endroit a corriger.
 # Relever ce que la version installee expose (892 commandes sur 0.8.2)
 node tools/recon.mjs 7878 ~/.photocraft/control.token releve.json
 
-# Refabriquer les images (teinte l'icone de PhotoCraft ; aucune dependance)
+# Refabriquer les images (compose du SVG ; aucune dependance)
 node tools/icones.mjs
 
 # Valider, installer, recharger
@@ -87,9 +87,11 @@ quels.
   Taille et durete sont de plus **propres a chaque outil**.
 - **Ne pas versionner le jeton.** Il donne un acces complet : ouvrir des fichiers, en ecrire,
   executer les 892 commandes. `.gitignore` couvre `*.token`.
-- **Ne pas redessiner les icones.** Elles derivent de l'icone de PhotoCraft, seul le fond est
-  teinte, et `tools/NOTICE.md` explique pourquoi et ce que cela implique cote marque. Changer
-  une couleur se fait dans `TEINTES`, pas dans un editeur d'images.
+- **Ne pas dessiner d'icones a la main.** Les touches reprennent les icones de l'interface de
+  PhotoCraft (`assets/icons`, des Lucide ISC) : une nouvelle action prend la sienne dans le
+  meme catalogue, rapatriee dans `tools/icones-source/`. Couleurs et correspondances se
+  reglent dans `ACTIONS` de `icones.mjs`, jamais dans un editeur d'images. `tools/NOTICE.md`
+  dit ce que chaque source implique cote licence.
 - **Ne pas avaler les erreurs de PhotoCraft.** Ses messages sont exploitables
   (« unknown blend mode `X` ») ; les afficher sur la touche est le seul diagnostic disponible
   sans ouvrir les logs.

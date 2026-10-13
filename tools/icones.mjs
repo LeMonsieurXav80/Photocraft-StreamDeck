@@ -1,20 +1,27 @@
-// Fabrique les images du plugin a partir de l'icone de PhotoCraft.
+// Fabrique les images du plugin.
 //
-// Le renard a neuf queues est l'icone de PhotoCraft : le reprendre rend les
-// touches immediatement identifiables, ce qu'un pictogramme invente ne fait
-// pas. Seul le FOND change, une teinte par action, pour qu'on distingue cinq
-// touches cote a cote sans les lire.
+// Deux familles, pour deux usages distincts :
 //
-// Le trait du dessin n'est jamais touche : on isole les pixels de fond par leur
-// dominante bleue et on ne recolore que ceux-la.
+//   - Les ICONES D'ACTION reprennent les icones de l'interface de PhotoCraft
+//     (`assets/icons`, des Lucide sous licence ISC). Une touche « Calque »
+//     porte ainsi le meme pictogramme que le panneau Calques de l'application :
+//     on la reconnait sans la lire, et sans avoir a apprendre un symbole
+//     invente pour l'occasion.
+//
+//   - L'ICONE DU PLUGIN et celle de la CATEGORIE reprennent l'icone de
+//     l'application — le renard a neuf queues. Elles ne designent pas une
+//     action mais le plugin lui-meme, dans la galerie et dans la liste des
+//     categories : c'est le seul endroit ou l'identite de PhotoCraft est le
+//     sujet.
+//
+// Les icones d'action sont composees en SVG, par simple assemblage de texte :
+// un fond arrondi teinte, et le trace Lucide en blanc par-dessus. Aucune
+// rasterisation, donc aucune bibliotheque de dessin. L'icone du plugin, elle,
+// doit etre en PNG (le Marketplace l'exige) : `png.mjs` s'en charge.
 //
 // Usage : node tools/icones.mjs
 //
-// La source est `tools/photocraft-icone-source.png`, extraite de la build
-// officielle 0.8.2 (voir tools/NOTICE.md). Pour la regenerer depuis une version
-// plus recente :
-//   iconutil -c iconset /Applications/PhotoCraft.app/Contents/Resources/PhotoCraft.icns -o /tmp/pc
-//   cp /tmp/pc/icon_512x512.png tools/photocraft-icone-source.png
+// Sources dans `tools/icones-source/`, provenance dans `tools/NOTICE.md`.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -22,34 +29,67 @@ import { fileURLToPath } from 'node:url';
 import { lirePng, ecrirePng, redimensionner } from './png.mjs';
 
 const ici = path.dirname(fileURLToPath(import.meta.url));
-const source = path.join(ici, 'photocraft-icone-source.png');
+const sources = path.join(ici, 'icones-source');
 const dossier = path.join(ici, '..', 'com.lemonsieurxav.photocraft.sdPlugin', 'images');
 fs.mkdirSync(dossier, { recursive: true });
 
-// Couleur de fond de l'icone officielle, relevee sur la source.
-const BLEU_ORIGINE = [48, 128, 240];
+// ---------------------------------------------------------------------------
+// Icones d'action, en SVG
+// ---------------------------------------------------------------------------
 
-// Une teinte par action. Le bleu d'origine reste celui du plugin et de la
-// categorie : c'est l'identite de l'application, elle ne doit pas bouger.
-const TEINTES = {
-  plugin:           BLEU_ORIGINE,
-  category:         BLEU_ORIGINE,
-  commande:         BLEU_ORIGINE,
-  outil:            [88, 96, 112],    // gris ardoise : outil au repos
-  'outil-actif':    [64, 176, 160],   // turquoise : outil actif
-  calque:           [124, 92, 200],   // violet
-  'calque-masque':  [72, 72, 80],     // gris eteint : calque masque
-  opacite:          [214, 148, 48],   // ambre
-  brosse:           [88, 168, 88],    // vert
+// Un fond colore par action : cinq touches cote a cote se distinguent d'abord
+// par leur couleur, le pictogramme ne servant qu'a confirmer.
+const ACTIONS = {
+  commande:        { icone: 'play.svg',        fond: '#3080f0' }, // le bleu de PhotoCraft
+  outil:           { icone: 'brush.svg',       fond: '#585f70' }, // ardoise : outil au repos
+  'outil-actif':   { icone: 'brush.svg',       fond: '#40b0a0' }, // turquoise : outil actif
+  calque:          { icone: 'layers.svg',      fond: '#7c5cc8' }, // violet
+  'calque-masque': { icone: 'eye-off.svg',     fond: '#484850' }, // gris eteint : calque masque
+  opacite:         { icone: 'blend.svg',       fond: '#d69430' }, // ambre
+  brosse:          { icone: 'circle-dot.svg',  fond: '#58a858' }, // vert
 };
 
-// --- preparation de la source ---------------------------------------------
+// Les Lucide font 24 px ; on les pose a 40 px dans un carre de 72, ce qui
+// laisse une marge suffisante pour que Stream Deck superpose son titre sans
+// mordre sur le trace.
+const COTE = 72;
+const TAILLE_ICONE = 40;
+const ECHELLE = TAILLE_ICONE / 24;
+const MARGE = (COTE - TAILLE_ICONE) / 2;
 
-const brut = lirePng(source);
+// Recupere le contenu du SVG source, sans son enveloppe <svg>. Les attributs
+// de trait sont reposes par le groupe parent : les Lucide utilisent
+// `currentColor`, qui ne resoudrait rien dans un fichier autonome.
+function traceLucide(nomFichier) {
+  const brut = fs.readFileSync(path.join(sources, nomFichier), 'utf8');
+  const debut = brut.indexOf('>', brut.indexOf('<svg')) + 1;
+  const fin = brut.lastIndexOf('</svg>');
+  return brut.slice(debut, fin).trim().split('\n').map((l) => '    ' + l.trim()).join('\n');
+}
 
-// Les icones macOS portent une marge transparente (l'icone de 512 px ne
-// remplit qu'environ 410 px). Sur une touche de 19 mm, cette marge est du
-// gachis : on recadre sur la boite opaque avant de reduire.
+const resume = [];
+for (const [nom, { icone, fond }] of Object.entries(ACTIONS)) {
+  const svg =
+`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${COTE} ${COTE}" width="${COTE}" height="${COTE}">
+  <rect width="${COTE}" height="${COTE}" rx="12" fill="${fond}"/>
+  <g transform="translate(${MARGE} ${MARGE}) scale(${ECHELLE})"
+     fill="none" stroke="#ffffff" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+${traceLucide(icone)}
+  </g>
+</svg>
+`;
+  fs.writeFileSync(path.join(dossier, `${nom}.svg`), svg);
+  resume.push(`${nom}.svg  ←  ${icone} sur ${fond}`);
+}
+
+// ---------------------------------------------------------------------------
+// Icone du plugin et de la categorie, en PNG
+// ---------------------------------------------------------------------------
+
+// Les icones macOS portent une marge transparente (512 px dont ~410 utiles).
+// Sur une vignette de galerie, cette marge est du gachis : on recadre sur la
+// boite opaque avant de reduire.
 function recadrer({ largeur, hauteur, pixels }) {
   let minX = largeur, minY = hauteur, maxX = -1, maxY = -1;
   for (let y = 0; y < hauteur; y++) {
@@ -65,63 +105,30 @@ function recadrer({ largeur, hauteur, pixels }) {
   const l = maxX - minX + 1, h = maxY - minY + 1;
   const sortie = Buffer.alloc(l * h * 4);
   for (let y = 0; y < h; y++) {
-    pixels.copy(sortie, y * l * 4, ((y + minY) * largeur + minX) * 4, ((y + minY) * largeur + minX + l) * 4);
+    pixels.copy(sortie, y * l * 4,
+      ((y + minY) * largeur + minX) * 4, ((y + minY) * largeur + minX + l) * 4);
   }
   return { largeur: l, hauteur: h, pixels: sortie };
 }
 
-const recadree = recadrer(brut);
+const renard = recadrer(lirePng(path.join(sources, 'photocraft-icone-source.png')));
 
-// --- recoloration du fond -------------------------------------------------
-
-// Un pixel appartient au fond dans la mesure ou le bleu domine le rouge. Le
-// dessin est en niveaux de gris (r ≈ v ≈ b), il obtient donc un masque nul et
-// reste intact ; les pixels du bord, lisses entre le fond et le trait,
-// obtiennent une valeur intermediaire et se melangent proprement.
-function masqueFond(r, v, b) {
-  const ecart = b - r;
-  const reference = BLEU_ORIGINE[2] - BLEU_ORIGINE[0]; // 192
-  return Math.max(0, Math.min(1, (ecart - 24) / (reference - 24)));
-}
-
-function teinter(image, couleur) {
-  const pixels = Buffer.from(image.pixels);
-  for (let i = 0; i < pixels.length; i += 4) {
-    if (pixels[i + 3] === 0) continue;
-    const m = masqueFond(pixels[i], pixels[i + 1], pixels[i + 2]);
-    if (m === 0) continue;
-    for (let canal = 0; canal < 3; canal++) {
-      pixels[i + canal] = Math.round(pixels[i + canal] * (1 - m) + couleur[canal] * m);
-    }
+for (const [nom, base] of [['plugin', 72], ['category', 28]]) {
+  for (const [suffixe, taille] of [['', base], ['@2x', base * 2]]) {
+    const image = redimensionner(renard, taille, taille);
+    ecrirePng(path.join(dossier, `${nom}${suffixe}.png`), taille, taille, image.pixels);
   }
-  return { ...image, pixels };
+  resume.push(`${nom}.png + @2x  ←  icone de l'application (${base}/${base * 2} px)`);
 }
 
-// --- ecriture -------------------------------------------------------------
-
-// Stream Deck demande 72 px pour les icones d'action et d'etat, et attend un
-// @2x pour l'icone du plugin et celle de la categorie.
-const TAILLES = { plugin: [72, 144], category: [28, 56] };
-
-const resume = [];
-for (const [nom, couleur] of Object.entries(TEINTES)) {
-  const teintee = teinter(recadree, couleur);
-  const [base, double] = TAILLES[nom] ?? [72, 144];
-
-  const petite = redimensionner(teintee, base, base);
-  ecrirePng(path.join(dossier, `${nom}.png`), base, base, petite.pixels);
-
-  const grande = redimensionner(teintee, double, double);
-  ecrirePng(path.join(dossier, `${nom}@2x.png`), double, double, grande.pixels);
-
-  resume.push(`${nom} (${base}/${double} px, fond rgb(${couleur.join(' ')}))`);
-}
-
-// Les anciennes icones dessinees a la main n'ont plus de raison d'etre.
+// Les PNG teintes de l'essai precedent n'ont plus de raison d'etre : les
+// actions sont en SVG desormais.
 for (const fichier of fs.readdirSync(dossier)) {
-  if (fichier.endsWith('.svg')) fs.unlinkSync(path.join(dossier, fichier));
+  const racine = fichier.replace(/(@2x)?\.png$/, '');
+  if (fichier.endsWith('.png') && racine in ACTIONS) {
+    fs.unlinkSync(path.join(dossier, fichier));
+  }
 }
 
-console.log(`source : ${path.basename(source)} ${brut.largeur}x${brut.hauteur}, recadree a ${recadree.largeur}x${recadree.hauteur}`);
 console.log(`images ecrites dans ${path.relative(process.cwd(), dossier)} :`);
 for (const ligne of resume) console.log('  ' + ligne);
