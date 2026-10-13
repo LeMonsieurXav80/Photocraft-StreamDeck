@@ -94,8 +94,15 @@ com.lemonsieurxav.photocraft.sdPlugin/
   inspector/     cinq inspecteurs, WebSocket brut, aucun CDN
 tools/
   recon.mjs      releve des capacites de la version installee
-  icones.mjs     fabrique les images (SVG + encodeur PNG sans dependance)
+  png.mjs        lecture/ecriture/reduction de PNG, sans dependance
+  icones.mjs     teinte l'icone de PhotoCraft, une couleur par action
+  NOTICE.md      provenance de l'icone et ce que son usage implique
 ```
+
+Les touches reprennent **l'icone de PhotoCraft** — le renard a neuf queues — avec un fond
+different par action, pour se distinguer sans etre lues. Seul le fond est recolore ; le dessin
+n'est pas modifie. Voir [`tools/NOTICE.md`](tools/NOTICE.md) pour la provenance et la question
+de marque, qui se pose avant toute soumission au Marketplace.
 
 Le canal de controle est **strictement requete/reponse : il n'emet aucune notification**. Pour
 afficher l'outil actif sur une touche, il faut le redemander. D'ou la regle qui structure tout

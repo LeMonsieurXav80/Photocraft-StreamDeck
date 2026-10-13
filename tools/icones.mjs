@@ -1,135 +1,127 @@
-// Fabrique les images du plugin : SVG pour les actions, PNG pour l'icone.
+// Fabrique les images du plugin a partir de l'icone de PhotoCraft.
 //
-// Pas de dependance de dessin : le PNG est encode a la main (zlib est dans
-// node:). Le depot n'a aucune etape de build, et ajouter une chaine d'outils
-// graphique pour deux fichiers de 72 pixels serait disproportionne.
+// Le renard a neuf queues est l'icone de PhotoCraft : le reprendre rend les
+// touches immediatement identifiables, ce qu'un pictogramme invente ne fait
+// pas. Seul le FOND change, une teinte par action, pour qu'on distingue cinq
+// touches cote a cote sans les lire.
+//
+// Le trait du dessin n'est jamais touche : on isole les pixels de fond par leur
+// dominante bleue et on ne recolore que ceux-la.
 //
 // Usage : node tools/icones.mjs
+//
+// La source est `tools/photocraft-icone-source.png`, extraite de la build
+// officielle 0.8.2 (voir tools/NOTICE.md). Pour la regenerer depuis une version
+// plus recente :
+//   iconutil -c iconset /Applications/PhotoCraft.app/Contents/Resources/PhotoCraft.icns -o /tmp/pc
+//   cp /tmp/pc/icon_512x512.png tools/photocraft-icone-source.png
 
 import fs from 'node:fs';
-import zlib from 'node:zlib';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { lirePng, ecrirePng, redimensionner } from './png.mjs';
 
 const ici = path.dirname(fileURLToPath(import.meta.url));
+const source = path.join(ici, 'photocraft-icone-source.png');
 const dossier = path.join(ici, '..', 'com.lemonsieurxav.photocraft.sdPlugin', 'images');
 fs.mkdirSync(dossier, { recursive: true });
 
-// --- PNG ------------------------------------------------------------------
+// Couleur de fond de l'icone officielle, relevee sur la source.
+const BLEU_ORIGINE = [48, 128, 240];
 
-function crc32(donnees) {
-  let c, table = [];
-  for (let n = 0; n < 256; n++) {
-    c = n;
-    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-    table[n] = c >>> 0;
-  }
-  let crc = 0xffffffff;
-  for (const octet of donnees) crc = table[(crc ^ octet) & 0xff] ^ (crc >>> 8);
-  return (crc ^ 0xffffffff) >>> 0;
-}
-
-function bloc(type, donnees) {
-  const longueur = Buffer.alloc(4);
-  longueur.writeUInt32BE(donnees.length);
-  const corps = Buffer.concat([Buffer.from(type, 'ascii'), donnees]);
-  const somme = Buffer.alloc(4);
-  somme.writeUInt32BE(crc32(corps));
-  return Buffer.concat([longueur, corps, somme]);
-}
-
-function ecrirePng(chemin, largeur, hauteur, pixel) {
-  const brut = Buffer.alloc(hauteur * (largeur * 4 + 1));
-  let p = 0;
-  for (let y = 0; y < hauteur; y++) {
-    brut[p++] = 0; // filtre: aucun
-    for (let x = 0; x < largeur; x++) {
-      const [r, v, b, a] = pixel(x / largeur, y / hauteur);
-      brut[p++] = r; brut[p++] = v; brut[p++] = b; brut[p++] = a;
-    }
-  }
-  const entete = Buffer.alloc(13);
-  entete.writeUInt32BE(largeur, 0);
-  entete.writeUInt32BE(hauteur, 4);
-  entete[8] = 8;   // 8 bits par canal
-  entete[9] = 6;   // RGBA
-  fs.writeFileSync(chemin, Buffer.concat([
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    bloc('IHDR', entete),
-    bloc('IDAT', zlib.deflateSync(brut, { level: 9 })),
-    bloc('IEND', Buffer.alloc(0)),
-  ]));
-}
-
-// Trois rectangles decales : la pile de calques, qui est ce que le plugin
-// manipule le plus. Lisible a 28 px sur une touche comme a 144 px en galerie.
-const FEUILLES = [
-  { x: 0.20, y: 0.46, l: 0.52, h: 0.30, couleur: [58, 74, 102] },
-  { x: 0.26, y: 0.33, l: 0.52, h: 0.30, couleur: [74, 122, 170] },
-  { x: 0.32, y: 0.20, l: 0.52, h: 0.30, couleur: [108, 182, 230] },
-];
-
-function pixelIcone(u, v) {
-  let couleur = [26, 28, 33, 255]; // fond
-  for (const f of FEUILLES) {
-    if (u >= f.x && u <= f.x + f.l && v >= f.y && v <= f.y + f.h) {
-      couleur = [...f.couleur, 255];
-    }
-  }
-  return couleur;
-}
-
-ecrirePng(path.join(dossier, 'plugin.png'), 72, 72, pixelIcone);
-ecrirePng(path.join(dossier, 'plugin@2x.png'), 144, 144, pixelIcone);
-ecrirePng(path.join(dossier, 'category.png'), 28, 28, pixelIcone);
-ecrirePng(path.join(dossier, 'category@2x.png'), 56, 56, pixelIcone);
-
-// --- SVG ------------------------------------------------------------------
-
-const svg = (contenu) =>
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72" width="72" height="72">` +
-  `<rect width="72" height="72" rx="10" fill="#1a1c21"/>${contenu}</svg>\n`;
-
-const ICONES = {
-  // Chevrons : une commande qu'on declenche.
-  commande: svg(
-    `<path d="M24 26l10 10-10 10" fill="none" stroke="#6cb6e6" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>` +
-    `<path d="M40 46h10" fill="none" stroke="#6cb6e6" stroke-width="5" stroke-linecap="round"/>`),
-
-  // Pointe de pinceau.
-  outil: svg(
-    `<path d="M26 46c0-6 4-8 4-14 0-4 3-8 6-8s6 4 6 8c0 6 4 8 4 14z" fill="#8d93a1"/>` +
-    `<rect x="26" y="46" width="20" height="6" rx="2" fill="#5e636f"/>`),
-  'outil-actif': svg(
-    `<path d="M26 46c0-6 4-8 4-14 0-4 3-8 6-8s6 4 6 8c0 6 4 8 4 14z" fill="#6cb6e6"/>` +
-    `<rect x="26" y="46" width="20" height="6" rx="2" fill="#4a7aaa"/>`),
-
-  // Pile de calques.
-  calque: svg(
-    `<rect x="17" y="38" width="38" height="12" rx="2" fill="#3a4a66"/>` +
-    `<rect x="17" y="30" width="38" height="12" rx="2" fill="#4a7aaa"/>` +
-    `<rect x="17" y="22" width="38" height="12" rx="2" fill="#6cb6e6"/>`),
-  'calque-masque': svg(
-    `<rect x="17" y="38" width="38" height="12" rx="2" fill="#2e3340"/>` +
-    `<rect x="17" y="30" width="38" height="12" rx="2" fill="#363c4b"/>` +
-    `<rect x="17" y="22" width="38" height="12" rx="2" fill="#3e4556"/>` +
-    `<path d="M18 54L54 18" stroke="#8d93a1" stroke-width="4" stroke-linecap="round"/>`),
-
-  // Damier qui transparait sous un aplat : l'opacite.
-  opacite: svg(
-    `<rect x="18" y="18" width="18" height="18" fill="#4a4f5c"/>` +
-    `<rect x="36" y="36" width="18" height="18" fill="#4a4f5c"/>` +
-    `<rect x="18" y="18" width="36" height="36" fill="#6cb6e6" fill-opacity="0.55"/>`),
-
-  // Deux disques : la taille de brosse.
-  brosse: svg(
-    `<circle cx="28" cy="40" r="8" fill="#5e636f"/>` +
-    `<circle cx="47" cy="36" r="14" fill="#6cb6e6"/>`),
+// Une teinte par action. Le bleu d'origine reste celui du plugin et de la
+// categorie : c'est l'identite de l'application, elle ne doit pas bouger.
+const TEINTES = {
+  plugin:           BLEU_ORIGINE,
+  category:         BLEU_ORIGINE,
+  commande:         BLEU_ORIGINE,
+  outil:            [88, 96, 112],    // gris ardoise : outil au repos
+  'outil-actif':    [64, 176, 160],   // turquoise : outil actif
+  calque:           [124, 92, 200],   // violet
+  'calque-masque':  [72, 72, 80],     // gris eteint : calque masque
+  opacite:          [214, 148, 48],   // ambre
+  brosse:           [88, 168, 88],    // vert
 };
 
-for (const [nom, contenu] of Object.entries(ICONES)) {
-  fs.writeFileSync(path.join(dossier, `${nom}.svg`), contenu);
+// --- preparation de la source ---------------------------------------------
+
+const brut = lirePng(source);
+
+// Les icones macOS portent une marge transparente (l'icone de 512 px ne
+// remplit qu'environ 410 px). Sur une touche de 19 mm, cette marge est du
+// gachis : on recadre sur la boite opaque avant de reduire.
+function recadrer({ largeur, hauteur, pixels }) {
+  let minX = largeur, minY = hauteur, maxX = -1, maxY = -1;
+  for (let y = 0; y < hauteur; y++) {
+    for (let x = 0; x < largeur; x++) {
+      if (pixels[(y * largeur + x) * 4 + 3] > 8) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  const l = maxX - minX + 1, h = maxY - minY + 1;
+  const sortie = Buffer.alloc(l * h * 4);
+  for (let y = 0; y < h; y++) {
+    pixels.copy(sortie, y * l * 4, ((y + minY) * largeur + minX) * 4, ((y + minY) * largeur + minX + l) * 4);
+  }
+  return { largeur: l, hauteur: h, pixels: sortie };
 }
 
-console.log(`images ecrites dans ${dossier} :`);
-for (const f of fs.readdirSync(dossier).sort()) console.log('  ' + f);
+const recadree = recadrer(brut);
+
+// --- recoloration du fond -------------------------------------------------
+
+// Un pixel appartient au fond dans la mesure ou le bleu domine le rouge. Le
+// dessin est en niveaux de gris (r ≈ v ≈ b), il obtient donc un masque nul et
+// reste intact ; les pixels du bord, lisses entre le fond et le trait,
+// obtiennent une valeur intermediaire et se melangent proprement.
+function masqueFond(r, v, b) {
+  const ecart = b - r;
+  const reference = BLEU_ORIGINE[2] - BLEU_ORIGINE[0]; // 192
+  return Math.max(0, Math.min(1, (ecart - 24) / (reference - 24)));
+}
+
+function teinter(image, couleur) {
+  const pixels = Buffer.from(image.pixels);
+  for (let i = 0; i < pixels.length; i += 4) {
+    if (pixels[i + 3] === 0) continue;
+    const m = masqueFond(pixels[i], pixels[i + 1], pixels[i + 2]);
+    if (m === 0) continue;
+    for (let canal = 0; canal < 3; canal++) {
+      pixels[i + canal] = Math.round(pixels[i + canal] * (1 - m) + couleur[canal] * m);
+    }
+  }
+  return { ...image, pixels };
+}
+
+// --- ecriture -------------------------------------------------------------
+
+// Stream Deck demande 72 px pour les icones d'action et d'etat, et attend un
+// @2x pour l'icone du plugin et celle de la categorie.
+const TAILLES = { plugin: [72, 144], category: [28, 56] };
+
+const resume = [];
+for (const [nom, couleur] of Object.entries(TEINTES)) {
+  const teintee = teinter(recadree, couleur);
+  const [base, double] = TAILLES[nom] ?? [72, 144];
+
+  const petite = redimensionner(teintee, base, base);
+  ecrirePng(path.join(dossier, `${nom}.png`), base, base, petite.pixels);
+
+  const grande = redimensionner(teintee, double, double);
+  ecrirePng(path.join(dossier, `${nom}@2x.png`), double, double, grande.pixels);
+
+  resume.push(`${nom} (${base}/${double} px, fond rgb(${couleur.join(' ')}))`);
+}
+
+// Les anciennes icones dessinees a la main n'ont plus de raison d'etre.
+for (const fichier of fs.readdirSync(dossier)) {
+  if (fichier.endsWith('.svg')) fs.unlinkSync(path.join(dossier, fichier));
+}
+
+console.log(`source : ${path.basename(source)} ${brut.largeur}x${brut.hauteur}, recadree a ${recadree.largeur}x${recadree.hauteur}`);
+console.log(`images ecrites dans ${path.relative(process.cwd(), dossier)} :`);
+for (const ligne of resume) console.log('  ' + ligne);
